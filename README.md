@@ -11,3 +11,9 @@ Computers.  I've decided to develop this one "in public" and to help motivate
 progress.
 
 This is my attempt to start ["learning in public"](https://www.swyx.io/learn-in-public/) more.
+
+## Vision
+
+ConfigCrab should have two main features
+- Install: Copys all config files to desired locations
+- Sync: Copys newer config files
