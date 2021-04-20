@@ -1,4 +1,5 @@
 use clap::{Arg, App};
+use std::fs;
 
 fn main() {
     let matches = App::new("ConfigCrab")
@@ -14,5 +15,5 @@ fn main() {
         .get_matches();
 
     let file = matches.value_of("file").unwrap();
-    println!("File path: {}", file);
+    fs::copy(file, "copy.txt");
 }

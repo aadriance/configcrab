@@ -17,3 +17,10 @@ This is my attempt to start ["learning in public"](https://www.swyx.io/learn-in-
 ConfigCrab should have two main features
 - Install: Copys all config files to desired locations
 - Sync: Copys newer config files
+
+ConfigCrab should have an easy config file that describes where items
+are placed based on OS being run. It should have a way to edit/generate
+this info from the CLI and it should be human readable/editable.
+
+If things go really well and I have nothing else to do, maybe I'll prebuild
+some default locations for common things like vim and vscode.
