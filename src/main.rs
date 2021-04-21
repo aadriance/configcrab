@@ -1,8 +1,9 @@
 use clap::{Arg, App};
 use std::{fs, env};
 use serde::{Serialize, Deserialize};
+use anyhow::Result;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Config {
     file: String,
     winpath: String,
@@ -36,10 +37,20 @@ fn main() {
                          macpath: "TestMac".to_string(),
                          linuxpath: "TestLinux".to_string()};
 
-    let yam = serde_yaml::to_string(&config).unwrap_or_else(|error| {
-        println!("No Yaml for you :( {}", error);
-        "err".to_string()
-    });
+    let example_config = [config.clone(), config.clone()];
+    export_config(&example_config, "configcrab.yaml").unwrap();
+    let import = import_config("configcrab.yaml").unwrap();
+    println!("{:?}", import);
+}
 
-    println!("Enjoy a yam: \n{}", yam);
+fn export_config(config: &[Config], file: &str) -> Result<()> {
+    let config_yaml = serde_yaml::to_string(&config)?;
+    fs::write(file, config_yaml)?;
+    Ok(())
+}
+
+fn import_config(file: &str) -> Result<Vec<Config>> {
+    let config_yaml = fs::read_to_string(file)?;
+    let config: Vec<Config> = serde_yaml::from_str(&config_yaml)?;
+    Ok(config)
 }

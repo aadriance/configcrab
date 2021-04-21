@@ -1,0 +1,9 @@
+---
+- file: Test
+  winpath: TestWin
+  macpath: TestMac
+  linuxpath: TestLinux
+- file: Test
+  winpath: TestWin
+  macpath: TestMac
+  linuxpath: TestLinux
