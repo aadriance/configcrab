@@ -1,7 +1,7 @@
-use clap::{Arg, App};
-use std::{fs, env};
-use serde::{Serialize, Deserialize};
 use anyhow::Result;
+use clap::{App, Arg};
+use serde::{Deserialize, Serialize};
+use std::{env, fs};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Config {
@@ -16,12 +16,14 @@ fn main() {
         .version("0.1.0")
         .author("Andrew Adriance")
         .about("ConfigCrab helps keep config files in sync.")
-        .arg(Arg::with_name("file") //TO-DO real args
-                 .short("f")
-                 .long("file")
-                 .takes_value(true)
-                 .help("File path")
-                 .required(true))
+        .arg(
+            Arg::with_name("file") //TO-DO real args
+                .short("f")
+                .long("file")
+                .takes_value(true)
+                .help("File path")
+                .required(true),
+        )
         .get_matches();
 
     let file = matches.value_of("file").unwrap();
@@ -32,12 +34,14 @@ fn main() {
 
     //eg; macos windows etc.
     println!("You're running: {}", env::consts::OS);
-    let config = Config{ file: "Test".to_string(),
-                         winpath: "TestWin".to_string(),
-                         macpath: "TestMac".to_string(),
-                         linuxpath: "TestLinux".to_string()};
+    let config = Config {
+        file: "Test".to_string(),
+        winpath: "TestWin".to_string(),
+        macpath: "TestMac".to_string(),
+        linuxpath: "TestLinux".to_string(),
+    };
 
-    let example_config = [config.clone(), config.clone()];
+    let example_config = [config.clone(), config];
     export_config(&example_config, "configcrab.yaml").unwrap();
     let import = import_config("configcrab.yaml").unwrap();
     println!("{:?}", import);
