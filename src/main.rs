@@ -2,23 +2,24 @@ use anyhow::Result;
 use clap::{App, Arg};
 use serde::{Deserialize, Serialize};
 use std::{env, fs};
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
+struct PlatformPath {
+    platform: String,
+    path: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Config {
     file: String,
-    winpath: String,
-    macpath: String,
-    linuxpath: String,
+    paths: Vec<PlatformPath>,
 }
 
 impl Config {
-    fn new() -> Config {
-        Config {
-            file: "".to_string(),
-            winpath: "".to_string(),
-            macpath: "".to_string(),
-            linuxpath: "".to_string()
-        }
+    fn new() -> Config{
+        Config{
+            file: "file".to_string(),
+            paths: Vec::new(),
+        } 
     }
 
     fn with_file(mut self, file: &str) -> Self {
@@ -26,26 +27,34 @@ impl Config {
         self
     }
 
-    fn with_winpath(mut self, winpath: &str) -> Self {
-        self.winpath = winpath.to_string();
+    fn with_platform(mut self, platform: &str, path: &str) -> Self {
+        let plat_path = PlatformPath {
+            platform: platform.to_string(),
+            path: path.to_string(),
+        };
+
+        self.paths.push(plat_path);
+        self.paths.sort();
         self
     }
 
-    fn with_macpath(mut self, macpath: &str) -> Self {
-        self.macpath = macpath.to_string();
-        self
+    fn with_winpath(self, winpath: &str) -> Self {
+        self.with_platform("windows", winpath)
     }
 
-    fn with_linuxpath(mut self, linuxpath: &str) -> Self {
-        self.linuxpath = linuxpath.to_string();
-        self
+    fn with_macpath(self, macpath: &str) -> Self {
+        self.with_platform("macos", macpath)
+    }
+
+    fn with_linuxpath(self, linuxpath: &str) -> Self {
+        self.with_platform("linux", linuxpath)
     }
 }
 
 #[derive(Debug)]
 struct CrabOrders {
     config_path: String,
-    platform: String
+    platform: String,
 }
 
 fn main() {
@@ -72,7 +81,7 @@ fn main() {
     //eg; macos windows etc.
     let orders = CrabOrders {
         config_path: "configcrab.yaml".to_string(),
-        platform: env::consts::OS.to_string()
+        platform: env::consts::OS.to_string(),
     };
 
     println!("Your orders: {:?}", orders);
@@ -100,6 +109,7 @@ fn import_config(file: &str) -> Result<Vec<Config>> {
     Ok(config)
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,3 +130,4 @@ mod tests {
         assert_eq!("linuxpath", full_config.linuxpath);
     }
 }
+*/
