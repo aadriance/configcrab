@@ -1,9 +1,9 @@
 ---
-- file: Test
-  winpath: TestWin
-  macpath: TestMac
-  linuxpath: TestLinux
-- file: Test
-  winpath: TestWin
-  macpath: TestMac
-  linuxpath: TestLinux
+- file: file
+  winpath: win
+  macpath: mac
+  linuxpath: linux
+- file: file
+  winpath: win
+  macpath: mac
+  linuxpath: linux
