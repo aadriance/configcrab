@@ -15,11 +15,11 @@ struct Config {
 }
 
 impl Config {
-    fn new() -> Config{
-        Config{
+    fn new() -> Config {
+        Config {
             file: "file".to_string(),
             paths: Vec::new(),
-        } 
+        }
     }
 
     fn with_file(mut self, file: &str) -> Self {
