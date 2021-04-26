@@ -1,5 +1,4 @@
 use anyhow::Result;
-use clap::{App, Arg};
 use serde::{Deserialize, Serialize};
 use std::{env, fs};
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
@@ -58,21 +57,24 @@ struct CrabOrders {
 }
 
 fn main() {
-    let matches = App::new("ConfigCrab")
-        .version("0.1.0")
-        .author("Andrew Adriance")
-        .about("ConfigCrab helps keep config files in sync.")
-        .arg(
-            Arg::with_name("file") //TO-DO real args
-                .short("f")
-                .long("file")
-                .takes_value(true)
-                .help("File path")
-                .required(true),
-        )
-        .get_matches();
+    let matches = crab_args::configcrab_app().get_matches();
 
-    let file = matches.value_of("file").unwrap();
+    if matches.is_present("platform_flags") {
+        //to-do improve magic arg strings
+        if matches.is_present("win") {
+            println!("Windows selected!");
+        }
+
+        if matches.is_present("mac") {
+            println!("Mac selected!");
+        }
+
+        if matches.is_present("linux") {
+            println!("Linux selected!");
+        }
+    }
+
+    let file = "test";//matches.value_of("file").unwrap();
     fs::copy(file, "copy.txt").unwrap_or_else(|error| {
         println!("Failed to copy file: {:?}", error);
         0
@@ -106,6 +108,39 @@ fn import_config(file: &str) -> Result<Vec<Config>> {
     let config_yaml = fs::read_to_string(file)?;
     let config: Vec<Config> = serde_yaml::from_str(&config_yaml)?;
     Ok(config)
+}
+
+mod crab_args {
+    use clap::*;
+
+    fn base_app() -> App<'static, 'static> {
+        App::new("ConfigCrab")
+            .version("0.1.0")
+            .author("Andrew Adriance")
+            .about("ConfigCrab helps keep config files in sync.") 
+    }
+
+    fn plat_args(app: App<'static, 'static>) -> App {
+            app
+            .arg(
+                Arg::with_name("win")
+                    .long("win")
+                    .help("Sets the platform to Windows"))
+            .arg(Arg::with_name("mac")
+                    .long("mac")
+                    .help("Sets ths platform to Mac OS"))
+            .arg(Arg::with_name("linux")
+                    .long("linux")
+                    .help("Sets the platform to Linux"))
+            .group(ArgGroup::with_name("platform_flags")
+                .args(&["win", "mac", "linux"]))
+    }
+
+    pub fn configcrab_app() -> App<'static, 'static> {
+        let mut configcrab = base_app();
+        configcrab = plat_args(configcrab);
+        configcrab
+    }
 }
 
 #[cfg(test)]
