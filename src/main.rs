@@ -1,6 +1,8 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::{env, fs};
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 struct PlatformPath {
     platform: String,
@@ -10,6 +12,7 @@ struct PlatformPath {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct Config {
     file: String,
+    file_dir: String,
     paths: Vec<PlatformPath>,
 }
 
@@ -17,6 +20,7 @@ impl Config {
     fn new() -> Config {
         Config {
             file: "".to_string(),
+            file_dir: "".to_string(),
             paths: Vec::new(),
         }
     }
@@ -59,22 +63,17 @@ struct CrabOrders {
 fn main() {
     let matches = crab_args::configcrab_app().get_matches();
 
-    if matches.is_present("platform_flags") {
-        //to-do improve magic arg strings
-        if matches.is_present("win") {
-            println!("Windows selected!");
-        }
+    let platform = if matches.is_present("win") {
+        "windows".to_string()
+    } else if matches.is_present("mac") {
+        "macos".to_string()
+    } else if matches.is_present("linux") {
+        "linux".to_string()
+    } else {
+        env::consts::OS.to_string()
+    };
 
-        if matches.is_present("mac") {
-            println!("Mac selected!");
-        }
-
-        if matches.is_present("linux") {
-            println!("Linux selected!");
-        }
-    }
-
-    let file = "test";//matches.value_of("file").unwrap();
+    let file = "test"; //matches.value_of("file").unwrap();
     fs::copy(file, "copy.txt").unwrap_or_else(|error| {
         println!("Failed to copy file: {:?}", error);
         0
@@ -82,12 +81,12 @@ fn main() {
 
     let orders = CrabOrders {
         config_path: "configcrab.yaml".to_string(),
-        platform: env::consts::OS.to_string(),
+        platform,
     };
 
     println!("Your orders: {:?}", orders);
     let config = Config::new()
-        .with_file("file")
+        .with_file("file.txt")
         .with_linuxpath("linux")
         .with_macpath("mac")
         .with_winpath("win");
@@ -96,6 +95,10 @@ fn main() {
     export_config(&example_config, "configcrab.yaml").unwrap();
     let import = import_config("configcrab.yaml").unwrap();
     println!("{:?}", import);
+
+    if matches.is_present("install") {
+        install(&example_config, &orders.platform);
+    }
 }
 
 fn export_config(config: &[Config], file: &str) -> Result<()> {
@@ -110,6 +113,24 @@ fn import_config(file: &str) -> Result<Vec<Config>> {
     Ok(config)
 }
 
+fn install(config: &[Config], platform: &str) {
+    for item in config {
+        for path in &item.paths {
+            if path.platform == platform {
+                let mut from_path = PathBuf::from(item.file_dir.clone());
+                from_path.push(item.file.clone());
+                let mut to_path = PathBuf::from(path.path.clone());
+                to_path.push(item.file.clone());
+                fs::copy(from_path, to_path).unwrap_or_else(|error| {
+                    println!("Failed to copy file: {:?}", error);
+                    0
+                });
+                break;
+            }
+        }
+    }
+}
+
 mod crab_args {
     use clap::*;
 
@@ -117,28 +138,36 @@ mod crab_args {
         App::new("ConfigCrab")
             .version("0.1.0")
             .author("Andrew Adriance")
-            .about("ConfigCrab helps keep config files in sync.") 
+            .about("ConfigCrab helps keep config files in sync.")
     }
 
     fn plat_args(app: App<'static, 'static>) -> App {
-            app
-            .arg(
-                Arg::with_name("win")
-                    .long("win")
-                    .help("Sets the platform to Windows"))
-            .arg(Arg::with_name("mac")
-                    .long("mac")
-                    .help("Sets ths platform to Mac OS"))
-            .arg(Arg::with_name("linux")
-                    .long("linux")
-                    .help("Sets the platform to Linux"))
-            .group(ArgGroup::with_name("platform_flags")
-                .args(&["win", "mac", "linux"]))
+        app.arg(
+            Arg::with_name("win")
+                .long("win")
+                .help("Sets the platform to Windows"),
+        )
+        .arg(
+            Arg::with_name("mac")
+                .long("mac")
+                .help("Sets ths platform to Mac OS"),
+        )
+        .arg(
+            Arg::with_name("linux")
+                .long("linux")
+                .help("Sets the platform to Linux"),
+        )
+        .group(ArgGroup::with_name("platform_flags").args(&["win", "mac", "linux"]))
+    }
+
+    fn install_sub_cmd(app: App<'static, 'static>) -> App {
+        app.subcommand(SubCommand::with_name("install"))
     }
 
     pub fn configcrab_app() -> App<'static, 'static> {
         let mut configcrab = base_app();
         configcrab = plat_args(configcrab);
+        configcrab = install_sub_cmd(configcrab);
         configcrab
     }
 }
