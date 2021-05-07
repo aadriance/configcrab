@@ -73,14 +73,9 @@ fn main() {
         env::consts::OS.to_string()
     };
 
-    let file = "test"; //matches.value_of("file").unwrap();
-    fs::copy(file, "copy.txt").unwrap_or_else(|error| {
-        println!("Failed to copy file: {:?}", error);
-        0
-    });
-
+    let config_path = matches.value_of("config").unwrap().to_string();
     let orders = CrabOrders {
-        config_path: "configcrab.yaml".to_string(),
+        config_path,
         platform,
     };
 
@@ -164,10 +159,21 @@ mod crab_args {
         app.subcommand(SubCommand::with_name("install"))
     }
 
+    fn options(app: App<'static, 'static>) -> App {
+        app.arg(
+            Arg::with_name("config")
+                .long("config")
+                .short("c")
+                .default_value("configcrab.yaml")
+                .help("Specify a config file for your crab"),
+        )
+    }
+
     pub fn configcrab_app() -> App<'static, 'static> {
         let mut configcrab = base_app();
         configcrab = plat_args(configcrab);
         configcrab = install_sub_cmd(configcrab);
+        configcrab = options(configcrab);
         configcrab
     }
 }
