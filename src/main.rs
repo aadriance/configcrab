@@ -60,8 +60,35 @@ struct CrabOrders {
     platform: String,
 }
 
+//
+// Macros take a bit of mind bending to get
+// use to after years of C #defines.
+// Took me a few reads to understand it,
+// here is a break down of how a variadic works
+// for when I look at this in a month and totally
+// forget.
+//
+// Repition start with $(
+// $(
+// The thing you are repeating
+//$element:expr
+//)
+// Comma seperated
+//,
+// contains 0 or more instances
+//*
+
+macro_rules! verbose {
+    ($toggle:expr, $format:expr, $($element:expr),*) => {
+        if $toggle {
+            println!($format, $($element),*);
+        }
+    }
+}
+
 fn main() {
     let matches = crab_args::configcrab_app().get_matches();
+    let v = crab_args::is_verbose(&matches);
 
     let platform = crab_args::get_platform(&matches);
     let config_path = crab_args::get_config_path(&matches);
@@ -70,7 +97,7 @@ fn main() {
         platform,
     };
 
-    println!("Your orders: {:?}", orders);
+    verbose!(v, "Your orders: {:#?}", orders);
     let config = Config::new()
         .with_file("file.txt")
         .with_linuxpath("linux")
@@ -165,6 +192,11 @@ mod crab_args {
                 .default_value("configcrab.yaml")
                 .help("Specify a config file for your crab"),
         )
+        .arg(
+            Arg::with_name("verbose")
+                .short("v")
+                .help("Enables debug output"),
+        )
     }
 
     pub fn configcrab_app() -> App<'static, 'static> {
@@ -191,6 +223,10 @@ mod crab_args {
 
     pub fn get_config_path(matches: &ArgMatches) -> String {
         matches.value_of("config").unwrap().to_string()
+    }
+
+    pub fn is_verbose(matches: &ArgMatches) -> bool {
+        matches.is_present("verbose")
     }
 }
 
