@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::path::PathBuf;
-use std::{env, fs};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 struct PlatformPath {
@@ -63,17 +63,8 @@ struct CrabOrders {
 fn main() {
     let matches = crab_args::configcrab_app().get_matches();
 
-    let platform = if matches.is_present("win") {
-        "windows".to_string()
-    } else if matches.is_present("mac") {
-        "macos".to_string()
-    } else if matches.is_present("linux") {
-        "linux".to_string()
-    } else {
-        env::consts::OS.to_string()
-    };
-
-    let config_path = matches.value_of("config").unwrap().to_string();
+    let platform = crab_args::get_platform(&matches);
+    let config_path = crab_args::get_config_path(&matches);
     let orders = CrabOrders {
         config_path,
         platform,
@@ -128,6 +119,7 @@ fn install(config: &[Config], platform: &str) {
 
 mod crab_args {
     use clap::*;
+    use std::env;
 
     fn base_app() -> App<'static, 'static> {
         App::new("ConfigCrab")
@@ -152,7 +144,13 @@ mod crab_args {
                 .long("linux")
                 .help("Sets the platform to Linux"),
         )
-        .group(ArgGroup::with_name("platform_flags").args(&["win", "mac", "linux"]))
+        .arg(
+            Arg::with_name("platform")
+                .long("platform")
+                .takes_value(true)
+                .help("Specifies a custom platform"),
+        )
+        .group(ArgGroup::with_name("platform_flags").args(&["win", "mac", "linux", "platform"]))
     }
 
     fn install_sub_cmd(app: App<'static, 'static>) -> App {
@@ -176,11 +174,30 @@ mod crab_args {
         configcrab = options(configcrab);
         configcrab
     }
+
+    pub fn get_platform(matches: &ArgMatches) -> String {
+        if matches.is_present("win") {
+            "windows".to_string()
+        } else if matches.is_present("mac") {
+            "macos".to_string()
+        } else if matches.is_present("linux") {
+            "linux".to_string()
+        } else if let Some(p) = matches.value_of("platform") {
+            p.to_string()
+        } else {
+            env::consts::OS.to_string()
+        }
+    }
+
+    pub fn get_config_path(matches: &ArgMatches) -> String {
+        matches.value_of("config").unwrap().to_string()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env;
 
     #[test]
     fn test_config_init_mac() {
