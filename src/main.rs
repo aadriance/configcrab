@@ -2,6 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::process;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 struct PlatformPath {
@@ -98,6 +99,18 @@ fn main() {
     };
 
     verbose!(v, "Your orders: {:#?}", orders);
+
+    let config = import_config(&orders.config_path).unwrap_or_else(|error| {
+        println!(
+            "Failed to import config({:?}) from {}",
+            error, orders.config_path
+        );
+        process::exit(1);
+    });
+
+    verbose!(v, "Imported: {:#?} from {}", config, orders.config_path);
+
+    //below here is just built in test code for now
     let config = Config::new()
         .with_file("file.txt")
         .with_linuxpath("linux")
