@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -125,6 +125,12 @@ fn main() {
     if matches.is_present("install") {
         install(&example_config, &orders.platform);
     }
+
+    let res = grab("../configcrab/README.md", "test");
+    match res {
+        Ok(v) => println!("Config: {:?}", v),
+        Err(e) => println!("error parsing path: {:?}", e),
+    }
 }
 
 fn export_config(config: &[Config], file: &str) -> Result<()> {
@@ -155,6 +161,27 @@ fn install(config: &[Config], platform: &str) {
             }
         }
     }
+}
+
+fn grab(target: &str, platform: &str) -> Result<Config> {
+    let path = PathBuf::from(target).canonicalize()?;
+    let file = path
+        .file_name()
+        .ok_or_else(|| anyhow!("No file in path"))?
+        .to_str()
+        .ok_or_else(|| anyhow!("Not a valid UTF-8 STR"))?;
+
+    let dir_path = path
+        .parent()
+        .ok_or_else(|| anyhow!("No directory parent"))?
+        .to_str()
+        .ok_or_else(|| anyhow!("Not a valid UTF-8 STR"))?;
+
+    Ok(Config::new()
+        .with_platform(platform, dir_path)
+        .with_file(file))
+
+    // Should I copy here? Is that someone elses job??
 }
 
 mod crab_args {
@@ -194,7 +221,23 @@ mod crab_args {
     }
 
     fn install_sub_cmd(app: App<'static, 'static>) -> App {
-        app.subcommand(SubCommand::with_name("install"))
+        app.subcommand(
+            SubCommand::with_name("install").about("Copies files from config to the local machine"),
+        )
+    }
+
+    fn grab_sub_cmd(app: App<'static, 'static>) -> App {
+        app.subcommand(
+            SubCommand::with_name("grab")
+                .about("Copies file from the local machine to the config")
+                .arg(
+                    Arg::with_name("target")
+                        .long("target")
+                        .short("t")
+                        .takes_value(true)
+                        .required(true),
+                ),
+        )
     }
 
     fn options(app: App<'static, 'static>) -> App {
@@ -217,6 +260,7 @@ mod crab_args {
         configcrab = plat_args(configcrab);
         configcrab = install_sub_cmd(configcrab);
         configcrab = options(configcrab);
+        configcrab = grab_sub_cmd(configcrab);
         configcrab
     }
 
