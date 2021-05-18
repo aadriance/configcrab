@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::process;
+use once_cell::sync::OnceCell;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 struct PlatformPath {
@@ -87,9 +88,26 @@ macro_rules! verbose {
     }
 }
 
+//
+// ew a global! I don't know, maybe I've written too many lines of C
+// but storing things like verbosity in a global location like this
+// makes a lot of sense to me. If this was Erlang where shared memory
+// doesn't exist, then yeah pass it around.
+//
+
+static VERBOSITY: OnceCell<bool> = OnceCell::new();
+
+fn verbosity() -> bool {
+    match VERBOSITY.get() {
+        Some(v) => *v,
+        None => false
+    }
+}
+
 fn main() {
     let matches = crab_args::configcrab_app().get_matches();
     let v = crab_args::is_verbose(&matches);
+    VERBOSITY.set(v).unwrap();
 
     let platform = crab_args::get_platform(&matches);
     let config_path = crab_args::get_config_path(&matches);
@@ -98,7 +116,7 @@ fn main() {
         platform,
     };
 
-    verbose!(v, "Your orders: {:#?}", orders);
+    verbose!(verbosity(), "Your orders: {:#?}", orders);
 
     let config = import_config(&orders.config_path).unwrap_or_else(|error| {
         println!(
@@ -108,7 +126,7 @@ fn main() {
         process::exit(1);
     });
 
-    verbose!(v, "Imported: {:#?} from {}", config, orders.config_path);
+    verbose!(verbosity(), "Imported: {:#?} from {}", config, orders.config_path);
 
     //below here is just built in test code for now
     let config = Config::new()
