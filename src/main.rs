@@ -1,4 +1,5 @@
 use anyhow::*;
+use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -146,8 +147,21 @@ fn main() {
 
     let res = grab("../configcrab/README.md", "test");
     match res {
-        Ok(v) => println!("Config: {:?}", v),
+        Ok(v) => {
+            println!("Config: {:?}", v);
+            println!("Sanitized: {}", sanitize_dir(&v.paths[0].path));
+        },
         Err(e) => println!("error parsing path: {:?}", e),
+    };
+
+    let home = home_dir();
+    println!("Home: {:?}", home);
+}
+
+fn sanitize_dir(dir: &str) -> String {
+    match home_dir() {
+        Some(home) => dir.replace(home.to_str().unwrap(), "$_HOME_$"),
+        None => dir.to_string()
     }
 }
 
