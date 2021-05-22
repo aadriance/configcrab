@@ -150,6 +150,7 @@ fn main() {
         Ok(v) => {
             println!("Config: {:?}", v);
             println!("Sanitized: {}", sanitize_dir(&v.paths[0].path));
+            println!("Orig: {}", desanitize_dir(&sanitize_dir(&v.paths[0].path)));
         },
         Err(e) => println!("error parsing path: {:?}", e),
     };
@@ -163,6 +164,13 @@ fn sanitize_dir(dir: &str) -> String {
         Some(home) => dir.replace(home.to_str().unwrap(), "$_HOME_$"),
         None => dir.to_string()
     }
+}
+
+fn desanitize_dir(dir: &str) -> String {
+    match home_dir() {
+        Some(home) => dir.replace("$_HOME_$", home.to_str().unwrap()),
+        None => dir.to_string()
+    }    
 }
 
 fn export_config(config: &[Config], file: &str) -> Result<()> {
