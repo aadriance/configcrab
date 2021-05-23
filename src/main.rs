@@ -1,10 +1,13 @@
 use anyhow::*;
 use dirs::home_dir;
+use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::process;
-use once_cell::sync::OnceCell;
+
+mod crab_args;
+mod tests;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 struct PlatformPath {
@@ -101,7 +104,7 @@ static VERBOSITY: OnceCell<bool> = OnceCell::new();
 fn verbosity() -> bool {
     match VERBOSITY.get() {
         Some(v) => *v,
-        None => false
+        None => false,
     }
 }
 
@@ -127,7 +130,12 @@ fn main() {
         process::exit(1);
     });
 
-    verbose!(verbosity(), "Imported: {:#?} from {}", config, orders.config_path);
+    verbose!(
+        verbosity(),
+        "Imported: {:#?} from {}",
+        config,
+        orders.config_path
+    );
 
     //below here is just built in test code for now
     let config = Config::new()
@@ -151,7 +159,7 @@ fn main() {
             println!("Config: {:?}", v);
             println!("Sanitized: {}", sanitize_dir(&v.paths[0].path));
             println!("Orig: {}", desanitize_dir(&sanitize_dir(&v.paths[0].path)));
-        },
+        }
         Err(e) => println!("error parsing path: {:?}", e),
     };
 
@@ -162,15 +170,15 @@ fn main() {
 fn sanitize_dir(dir: &str) -> String {
     match home_dir() {
         Some(home) => dir.replace(home.to_str().unwrap(), "$_HOME_$"),
-        None => dir.to_string()
+        None => dir.to_string(),
     }
 }
 
 fn desanitize_dir(dir: &str) -> String {
     match home_dir() {
         Some(home) => dir.replace("$_HOME_$", home.to_str().unwrap()),
-        None => dir.to_string()
-    }    
+        None => dir.to_string(),
+    }
 }
 
 fn export_config(config: &[Config], file: &str) -> Result<()> {
@@ -222,174 +230,4 @@ fn grab(target: &str, platform: &str) -> Result<Config> {
         .with_file(file))
 
     // Should I copy here? Is that someone elses job??
-}
-
-mod crab_args {
-    use clap::*;
-    use std::env;
-
-    fn base_app() -> App<'static, 'static> {
-        App::new("ConfigCrab")
-            .version("0.1.0")
-            .author("Andrew Adriance")
-            .about("ConfigCrab helps keep config files in sync.")
-    }
-
-    fn plat_args(app: App<'static, 'static>) -> App {
-        app.arg(
-            Arg::with_name("win")
-                .long("win")
-                .help("Sets the platform to Windows"),
-        )
-        .arg(
-            Arg::with_name("mac")
-                .long("mac")
-                .help("Sets ths platform to Mac OS"),
-        )
-        .arg(
-            Arg::with_name("linux")
-                .long("linux")
-                .help("Sets the platform to Linux"),
-        )
-        .arg(
-            Arg::with_name("platform")
-                .long("platform")
-                .takes_value(true)
-                .help("Specifies a custom platform"),
-        )
-        .group(ArgGroup::with_name("platform_flags").args(&["win", "mac", "linux", "platform"]))
-    }
-
-    fn install_sub_cmd(app: App<'static, 'static>) -> App {
-        app.subcommand(
-            SubCommand::with_name("install").about("Copies files from config to the local machine"),
-        )
-    }
-
-    fn grab_sub_cmd(app: App<'static, 'static>) -> App {
-        app.subcommand(
-            SubCommand::with_name("grab")
-                .about("Copies file from the local machine to the config")
-                .arg(
-                    Arg::with_name("target")
-                        .long("target")
-                        .short("t")
-                        .takes_value(true)
-                        .required(true),
-                ),
-        )
-    }
-
-    fn options(app: App<'static, 'static>) -> App {
-        app.arg(
-            Arg::with_name("config")
-                .long("config")
-                .short("c")
-                .default_value("configcrab.yaml")
-                .help("Specify a config file for your crab"),
-        )
-        .arg(
-            Arg::with_name("verbose")
-                .short("v")
-                .help("Enables debug output"),
-        )
-    }
-
-    pub fn configcrab_app() -> App<'static, 'static> {
-        let mut configcrab = base_app();
-        configcrab = plat_args(configcrab);
-        configcrab = install_sub_cmd(configcrab);
-        configcrab = options(configcrab);
-        configcrab = grab_sub_cmd(configcrab);
-        configcrab
-    }
-
-    pub fn get_platform(matches: &ArgMatches) -> String {
-        if matches.is_present("win") {
-            "windows".to_string()
-        } else if matches.is_present("mac") {
-            "macos".to_string()
-        } else if matches.is_present("linux") {
-            "linux".to_string()
-        } else if let Some(p) = matches.value_of("platform") {
-            p.to_string()
-        } else {
-            env::consts::OS.to_string()
-        }
-    }
-
-    pub fn get_config_path(matches: &ArgMatches) -> String {
-        matches.value_of("config").unwrap().to_string()
-    }
-
-    pub fn is_verbose(matches: &ArgMatches) -> bool {
-        matches.is_present("verbose")
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::env;
-
-    #[test]
-    fn test_config_init_mac() {
-        let test_config = Config::new();
-        assert_eq!("", test_config.file);
-        let full_config = Config::new().with_file("file").with_macpath("macpath");
-
-        assert_eq!("file", full_config.file);
-        assert_eq!("macos", full_config.paths[0].platform);
-        assert_eq!("macpath", full_config.paths[0].path);
-    }
-
-    #[test]
-    fn test_config_init_win() {
-        let test_config = Config::new();
-        assert_eq!("", test_config.file);
-        let full_config = Config::new().with_file("file").with_winpath("winpath");
-
-        assert_eq!("file", full_config.file);
-        assert_eq!("windows", full_config.paths[0].platform);
-        assert_eq!("winpath", full_config.paths[0].path);
-    }
-
-    #[test]
-    fn test_config_init_linux() {
-        let test_config = Config::new();
-        assert_eq!("", test_config.file);
-        let full_config = Config::new().with_file("file").with_linuxpath("linuxpath");
-
-        assert_eq!("file", full_config.file);
-        assert_eq!("linux", full_config.paths[0].platform);
-        assert_eq!("linuxpath", full_config.paths[0].path);
-    }
-
-    #[test]
-    fn test_config_init_platform() {
-        let test_config = Config::new();
-        assert_eq!("", test_config.file);
-        let full_config = Config::new()
-            .with_file("file")
-            .with_platform(env::consts::OS, "platpath");
-
-        assert_eq!("file", full_config.file);
-        assert_eq!(env::consts::OS, full_config.paths[0].platform);
-        assert_eq!("platpath", full_config.paths[0].path);
-    }
-
-    #[test]
-    fn test_import_export() {
-        let config = Config::new()
-            .with_file("file")
-            .with_linuxpath("linux")
-            .with_macpath("mac")
-            .with_winpath("win");
-
-        let example_config = [config.clone(), config];
-        export_config(&example_config, "test_configcrab.yaml").unwrap();
-        let import = import_config("test_configcrab.yaml").unwrap();
-        fs::remove_file("test_configcrab.yaml").unwrap();
-        assert_eq!(example_config.to_vec(), import);
-    }
 }
